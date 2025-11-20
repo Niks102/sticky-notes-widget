@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Notes Widget</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Lexend:wght@600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #F6F3EE;
+            --bg-secondary: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-color: #ddd;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --accent: #3B8EA5;
+            --accent-active: #277788;
+        }
+
+        body.dark-mode {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #e8e8e8;
+            --text-secondary: #aaa;
+            --border-color: #444;
+            --shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        body {
+            font-family: 'Caveat', cursive;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+            overflow: hidden;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            box-shadow: var(--shadow);
+            font-family: 'Lexend', sans-serif;
+        }
+
+        .toolbar-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #3B8EA5;
+            color: #FFFFFF;
+            cursor: pointer;
+            font-family: 'Lexend', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background-color: #277788;
+            color: white;
+            border-color: #277788;
+        }
+
+        button.active {
+            background-color: #277788;
+            color: white;
+            border-color: #277788;
+        }
+
+        .tag-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tag-button {
+            padding: 8px 14px;
+            border: 2px solid #3B8EA5;
+            background-color: #3B8EA5;
+            color: #FFFFFF;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Lexend', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tag-button:hover {
+            background-color: #277788;
+            border-color: #277788;
+            color: white;
+        }
+
+        .tag-button.selected {
+            background-color: #277788;
+            color: white;
+            border-color: #277788;
+        }
+
+        input[type="text"], input[type="date"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: 'Caveat', cursive;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        label {
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+        }
+
+        .note-counter {
+            margin-left: auto;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .keyboard-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 10px;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .canvas-area {
+            flex: 1;
+            background-color: var(--bg-primary);
+            overflow: auto;
+            position: relative;
+        }
+
+        .sticky-note {
+            position: absolute;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            cursor: grab;
+            user-select: none;
+            font-family: 'Caveat', cursive;
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.5;
+            min-width: 150px;
+            max-width: 300px;
+            word-wrap: break-word;
+            transition: transform 0.1s, box-shadow 0.1s;
+            border: 2px solid transparent;
+        }
+
+        .sticky-note:hover {
+            transform: rotate(1deg) scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .sticky-note.grabbing {
+            cursor: grabbing;
+            z-index: 1000;
+            transform: rotate(2deg) scale(1.05);
+        }
+
+        .sticky-note.time-sensitive {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2), var(--shadow);
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .note-date {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .note-flag {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-color: #ff6b6b;
+            border-radius: 2px;
+            color: white;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .note-content {
+            min-height: 40px;
+            word-break: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+
+        .note-content.editable {
+            cursor: text;
+            border: 1px dashed var(--text-secondary);
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .note-due-date {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background-color: rgba(255, 107, 107, 0.15);
+            border-radius: 4px;
+            font-size: 16px;
+            color: #d32f2f;
+            font-family: 'Caveat', cursive;
+            font-weight: 700;
+            border-left: 4px solid #d32f2f;
+        }
+
+        .note-footer {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 12px;
+        }
+
+        .tag {
+            background-color: rgba(59, 142, 165, 0.15);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+            color: #3B8EA5;
+            border: 1px solid rgba(59, 142, 165, 0.3);
+        }
+
+        .note-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .note-actions button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-family: 'Lexend', sans-serif;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 16px;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: 'Caveat', cursive;
+            font-size: 24px;
+            font-weight: 700;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            resize: vertical;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .modal-actions button {
+            padding: 10px 20px;
+        }
+
+        .gallery-view {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .gallery-view.show {
+            display: block;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .gallery-note {
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            border: 2px solid transparent;
+        }
+
+        .gallery-note.time-sensitive {
+            border-color: #ff6b6b;
+        }
+
+        .floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3B8EA5;
+            color: white;
+            border: none;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 500;
+            transition: transform 0.2s;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+        }
+
+        .floating-btn:hover {
+            background-color: #277788;
+            transform: scale(1.1);
+        }
+
+        .floating-btn:active {
+            transform: scale(0.95);
+        }
+
+        .keyboard-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 10px;
+        }
+
+        .color-yellow { background-color: #FFFACD; color: #333; }
+        .color-blue { background-color: #ADD8E6; color: #333; }
+        .color-pink { background-color: #FFB3D9; color: #333; }
+        .color-green { background-color: #C1FFC1; color: #333; }
+        .color-peach { background-color: #FFDAB9; color: #333; }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            font-size: 20px;
+            text-align: center;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+        }
+
+        .undo-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #3B8EA5;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 501;
+            animation: slideIn 0.3s ease;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <button id="newNoteBtn" class="add-btn">+ Note</button>
+            </div>
+            
+            <div class="toolbar-section">
+                <button id="canvasViewBtn" class="active">Canvas</button>
+                <button id="galleryViewBtn">Gallery</button>
+                <button id="archiveViewBtn">Archive</button>
+            </div>
+
+            <div class="toolbar-section">
+                <button id="darkModeBtn">🌙 Dark</button>
+            </div>
+
+            <div class="toolbar-section">
+                <input type="text" id="searchBox" class="search-box" placeholder="Search for notes...">
+            </div>
+
+            <div class="note-counter">
+                <span id="noteCount">0</span> notes
+            </div>
+        </div>
+
+        <div id="canvasArea" class="canvas-area">
+            <div class="empty-state">No notes yet. Create one to get started!</div>
+        </div>
+
+        <div id="galleryView" class="gallery-view">
+            <div class="gallery-grid" id="galleryGrid"></div>
+        </div>
+    </div>
+
+    <!-- New Note Modal -->
+    <div id="newNoteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Create New Note</div>
+            <form id="noteForm">
+                <div class="form-group">
+                    <label>Note Type</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <label>
+                            <input type="radio" name="noteType" value="general" checked> General
+                        </label>
+                        <label>
+                            <input type="radio" name="noteType" value="todo"> To-Do
+                        </label>
+                        <label>
+                            <input type="radio" name="noteType" value="reminder"> Reminder
+                        </label>
+                        <label>
+                            <input type="radio" name="noteType" value="idea"> Idea
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="noteText">What's on your mind?</label>
+                    <textarea id="noteText" required autofocus></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Tags (select presets or add custom)</label>
+                    <div class="tag-buttons" id="tagButtons">
+                        <button type="button" class="tag-button" data-tag="#work">#work</button>
+                        <button type="button" class="tag-button" data-tag="#personal">#personal</button>
+                        <button type="button" class="tag-button" data-tag="#urgent">#urgent</button>
+                        <button type="button" class="tag-button" data-tag="#ideas">#ideas</button>
+                        <button type="button" class="tag-button" data-tag="#follow-up">#follow-up</button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label for="noteTags">Add custom tags (comma-separated, optional)</label>
+                        <input type="text" id="noteTags" placeholder="e.g., #project-name, #deadline">
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="timeSensitive">
+                    <label for="timeSensitive">Time sensitive?</label>
+                </div>
+
+                <div id="dueDateGroup" style="display: none;">
+                    <div class="form-group">
+                        <label for="dueDate">Due Date</label>
+                        <input type="date" id="dueDate">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="cancelBtn">Cancel</button>
+                    <button type="submit">Create Note</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Note Modal -->
+    <div id="editNoteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Note</div>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="editNoteText">Note Text</label>
+                    <textarea id="editNoteText" required autofocus></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Tags (select presets or add custom)</label>
+                    <div class="tag-buttons" id="editTagButtons">
+                        <button type="button" class="tag-button" data-tag="#work">#work</button>
+                        <button type="button" class="tag-button" data-tag="#personal">#personal</button>
+                        <button type="button" class="tag-button" data-tag="#urgent">#urgent</button>
+                        <button type="button" class="tag-button" data-tag="#ideas">#ideas</button>
+                        <button type="button" class="tag-button" data-tag="#follow-up">#follow-up</button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label for="editNoteTags">Add custom tags (comma-separated, optional)</label>
+                        <input type="text" id="editNoteTags" placeholder="e.g., #project-name, #deadline">
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="editTimeSensitive">
+                    <label for="editTimeSensitive">Time sensitive?</label>
+                </div>
+
+                <div id="editDueDateGroup" style="display: none;">
+                    <div class="form-group">
+                        <label for="editDueDate">Due Date</label>
+                        <input type="date" id="editDueDate">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="editCancelBtn">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <button class="floating-btn" id="floatingAddBtn">+</button>
+
+    <script>
+        // Color palette for notes
+        const colors = ['color-yellow', 'color-blue', 'color-pink', 'color-green', 'color-peach'];
+        
+        // State
+        let notes = [];
+        let archivedNotes = [];
+        let currentView = 'canvas'; // canvas, gallery, archive
+        let undoStack = [];
+        let draggedNote = null;
+        let dragOffset = { x: 0, y: 0 };
+        let editingNoteId = null;
+        let selectedTags = []; // Track selected tag buttons
+        let editingSelectedTags = []; // Track selected tags in edit modal
+
+        // DOM elements
+        const canvasArea = document.getElementById('canvasArea');
+        const galleryView = document.getElementById('galleryView');
+        const galleryGrid = document.getElementById('galleryGrid');
+        const newNoteModal = document.getElementById('newNoteModal');
+        const editNoteModal = document.getElementById('editNoteModal');
+        const noteForm = document.getElementById('noteForm');
+        const editForm = document.getElementById('editForm');
+        const searchBox = document.getElementById('searchBox');
+        const noteCounter = document.getElementById('noteCount');
+        const canvasViewBtn = document.getElementById('canvasViewBtn');
+        const galleryViewBtn = document.getElementById('galleryViewBtn');
+        const archiveViewBtn = document.getElementById('archiveViewBtn');
+        const darkModeBtn = document.getElementById('darkModeBtn');
+        const newNoteBtn = document.getElementById('newNoteBtn');
+        const floatingAddBtn = document.getElementById('floatingAddBtn');
+        const timeSensitiveCheckbox = document.getElementById('timeSensitive');
+        const dueDateGroup = document.getElementById('dueDateGroup');
+        const editTimeSensitiveCheckbox = document.getElementById('editTimeSensitive');
+        const editDueDateGroup = document.getElementById('editDueDateGroup');
+
+        // Initialize
+        function init() {
+            loadNotes();
+            setupEventListeners();
+            checkReminders();
+            updateView();
+        }
+
+        function setupEventListeners() {
+            // Modal controls
+            newNoteBtn.addEventListener('click', openNewNoteModal);
+            floatingAddBtn.addEventListener('click', openNewNoteModal);
+            document.getElementById('cancelBtn').addEventListener('click', closeNewNoteModal);
+            document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
+            noteForm.addEventListener('submit', createNote);
+            editForm.addEventListener('submit', saveEditedNote);
+
+            // Tag button listeners
+            document.getElementById('tagButtons').addEventListener('click', (e) => {
+                if (e.target.classList.contains('tag-button')) {
+                    e.preventDefault();
+                    const tag = e.target.dataset.tag;
+                    const customTagsInput = document.getElementById('noteTags');
+                    const currentValue = customTagsInput.value.trim();
+                    
+                    if (e.target.classList.contains('selected')) {
+                        // Remove tag from selection and input
+                        e.target.classList.remove('selected');
+                        selectedTags = selectedTags.filter(t => t !== tag);
+                        // Remove from input field
+                        const tags = currentValue.split(',').map(t => t.trim()).filter(t => t !== tag && t !== '');
+                        customTagsInput.value = tags.join(', ');
+                    } else {
+                        // Add tag to selection and input
+                        e.target.classList.add('selected');
+                        selectedTags.push(tag);
+                        // Add to input field
+                        if (currentValue) {
+                            customTagsInput.value = currentValue + ', ' + tag;
+                        } else {
+                            customTagsInput.value = tag;
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('editTagButtons').addEventListener('click', (e) => {
+                if (e.target.classList.contains('tag-button')) {
+                    e.preventDefault();
+                    const tag = e.target.dataset.tag;
+                    const customTagsInput = document.getElementById('editNoteTags');
+                    const currentValue = customTagsInput.value.trim();
+                    
+                    if (e.target.classList.contains('selected')) {
+                        // Remove tag from selection and input
+                        e.target.classList.remove('selected');
+                        editingSelectedTags = editingSelectedTags.filter(t => t !== tag);
+                        // Remove from input field
+                        const tags = currentValue.split(',').map(t => t.trim()).filter(t => t !== tag && t !== '');
+                        customTagsInput.value = tags.join(', ');
+                    } else {
+                        // Add tag to selection and input
+                        e.target.classList.add('selected');
+                        editingSelectedTags.push(tag);
+                        // Add to input field
+                        if (currentValue) {
+                            customTagsInput.value = currentValue + ', ' + tag;
+                        } else {
+                            customTagsInput.value = tag;
+                        }
+                    }
+                }
+            });
+
+            // View controls
+            canvasViewBtn.addEventListener('click', switchToCanvasView);
+            galleryViewBtn.addEventListener('click', switchToGalleryView);
+            archiveViewBtn.addEventListener('click', switchToArchiveView);
+
+            // Dark mode
+            darkModeBtn.addEventListener('click', toggleDarkMode);
+
+            // Search
+            searchBox.addEventListener('input', filterNotes);
+
+            // Time-sensitive checkbox
+            timeSensitiveCheckbox.addEventListener('change', (e) => {
+                dueDateGroup.style.display = e.target.checked ? 'block' : 'none';
+            });
+
+            editTimeSensitiveCheckbox.addEventListener('change', (e) => {
+                editDueDateGroup.style.display = e.target.checked ? 'block' : 'none';
+            });
+
+            // Keyboard shortcut
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    openNewNoteModal();
+                }
+            });
+        }
+
+        function createNote(e) {
+            e.preventDefault();
+            
+            const noteType = document.querySelector('input[name="noteType"]:checked').value;
+            const text = document.getElementById('noteText').value;
+            const tagsInput = document.getElementById('noteTags').value;
+            const isTimeSensitive = timeSensitiveCheckbox.checked;
+            const dueDate = document.getElementById('dueDate').value;
+
+            // Combine selected preset tags with custom tags
+            let allTags = [...selectedTags];
+            
+            if (tagsInput.trim()) {
+                const customTags = tagsInput
+                    .split(',')
+                    .map(tag => tag.trim())
+                    .filter(tag => tag.length > 0)
+                    .map(tag => tag.startsWith('#') ? tag : '#' + tag);
+                allTags = [...allTags, ...customTags];
+            }
+
+            // Remove duplicates
+            allTags = [...new Set(allTags)];
+
+            const note = {
+                id: Date.now(),
+                text: text,
+                type: noteType,
+                tags: allTags,
+                createdDate: new Date().toLocaleDateString(),
+                isTimeSensitive: isTimeSensitive,
+                dueDate: dueDate,
+                x: Math.random() * (window.innerWidth - 300),
+                y: Math.random() * (window.innerHeight - 300),
+                color: colors[Math.floor(Math.random() * colors.length)]
+            };
+
+            notes.unshift(note);
+            saveNotes();
+            closeNewNoteModal();
+            updateView();
+        }
+
+        function saveEditedNote(e) {
+            e.preventDefault();
+            
+            const noteIndex = notes.findIndex(n => n.id === editingNoteId);
+            if (noteIndex === -1) return;
+
+            const text = document.getElementById('editNoteText').value;
+            const tagsInput = document.getElementById('editNoteTags').value;
+            const isTimeSensitive = editTimeSensitiveCheckbox.checked;
+            const dueDate = document.getElementById('editDueDate').value;
+
+            // Combine selected preset tags with custom tags
+            let allTags = [...editingSelectedTags];
+            
+            if (tagsInput.trim()) {
+                const customTags = tagsInput
+                    .split(',')
+                    .map(tag => tag.trim())
+                    .filter(tag => tag.length > 0)
+                    .map(tag => tag.startsWith('#') ? tag : '#' + tag);
+                allTags = [...allTags, ...customTags];
+            }
+
+            // Remove duplicates
+            allTags = [...new Set(allTags)];
+
+            notes[noteIndex].text = text;
+            notes[noteIndex].tags = allTags;
+            notes[noteIndex].isTimeSensitive = isTimeSensitive;
+            notes[noteIndex].dueDate = dueDate;
+
+            saveNotes();
+            closeEditModal();
+            updateView();
+        }
+
+        function deleteNote(id, isArchived = false) {
+            addToUndoStack();
+            
+            if (isArchived) {
+                archivedNotes = archivedNotes.filter(n => n.id !== id);
+            } else {
+                notes = notes.filter(n => n.id !== id);
+            }
+            
+            saveNotes();
+            updateView();
+        }
+
+        function archiveNote(id) {
+            addToUndoStack();
+            const note = notes.find(n => n.id === id);
+            if (note) {
+                notes = notes.filter(n => n.id !== id);
+                archivedNotes.unshift(note);
+                saveNotes();
+                updateView();
+                showNotification('Note archived. You can find it in the Archive.');
+            }
+        }
+
+        function restoreNote(id) {
+            addToUndoStack();
+            const note = archivedNotes.find(n => n.id === id);
+            if (note) {
+                archivedNotes = archivedNotes.filter(n => n.id !== id);
+                notes.unshift(note);
+                saveNotes();
+                updateView();
+            }
+        }
+
+        function openEditModal(id) {
+            const note = notes.find(n => n.id === id);
+            if (!note) return;
+
+            editingNoteId = id;
+            document.getElementById('editNoteText').value = note.text;
+            document.getElementById('editTimeSensitive').checked = note.isTimeSensitive;
+            document.getElementById('editDueDate').value = note.dueDate || '';
+            editDueDateGroup.style.display = note.isTimeSensitive ? 'block' : 'none';
+            
+            // Separate preset tags from custom tags
+            editingSelectedTags = [];
+            const presetTags = ['#work', '#personal', '#urgent', '#ideas', '#follow-up'];
+            const customTags = [];
+            
+            note.tags.forEach(tag => {
+                if (presetTags.includes(tag)) {
+                    editingSelectedTags.push(tag);
+                } else {
+                    customTags.push(tag);
+                }
+            });
+            
+            // Set custom tags in the input
+            document.getElementById('editNoteTags').value = customTags.join(', ');
+            
+            // Pre-select the preset tag buttons
+            document.querySelectorAll('#editTagButtons .tag-button').forEach(btn => {
+                if (editingSelectedTags.includes(btn.dataset.tag)) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            editNoteModal.classList.add('show');
+            document.getElementById('editNoteText').focus();
+        }
+
+        function closeEditModal() {
+            editNoteModal.classList.remove('show');
+            editingNoteId = null;
+            editingSelectedTags = [];
+            // Clear selected state from edit tag buttons
+            document.querySelectorAll('#editTagButtons .tag-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+
+        function openNewNoteModal() {
+            newNoteModal.classList.add('show');
+            document.getElementById('noteText').focus();
+        }
+
+        function closeNewNoteModal() {
+            newNoteModal.classList.remove('show');
+            noteForm.reset();
+            dueDateGroup.style.display = 'none';
+            selectedTags = [];
+            // Clear selected state from tag buttons
+            document.querySelectorAll('#tagButtons .tag-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+
+        function switchToCanvasView() {
+            currentView = 'canvas';
+            canvasViewBtn.classList.add('active');
+            galleryViewBtn.classList.remove('active');
+            archiveViewBtn.classList.remove('active');
+            canvasArea.style.display = 'block';
+            galleryView.style.display = 'none';
+            updateCanvasView();
+        }
+
+        function switchToGalleryView() {
+            currentView = 'gallery';
+            canvasViewBtn.classList.remove('active');
+            galleryViewBtn.classList.add('active');
+            archiveViewBtn.classList.remove('active');
+            canvasArea.style.display = 'none';
+            galleryView.style.display = 'block';
+            updateGalleryView();
+        }
+
+        function switchToArchiveView() {
+            currentView = 'archive';
+            canvasViewBtn.classList.remove('active');
+            galleryViewBtn.classList.remove('active');
+            archiveViewBtn.classList.add('active');
+            canvasArea.style.display = 'none';
+            galleryView.style.display = 'block';
+            updateArchiveView();
+        }
+
+        function updateCanvasView() {
+            const filtered = getFilteredNotes();
+            canvasArea.innerHTML = '';
+
+            if (filtered.length === 0) {
+                canvasArea.innerHTML = '<div class="empty-state">No notes found. Try adjusting your search.</div>';
+                return;
+            }
+
+            filtered.forEach(note => {
+                const noteEl = createNoteElement(note);
+                canvasArea.appendChild(noteEl);
+                setupNoteDragListeners(noteEl, note.id);
+            });
+
+            updateNoteCounter();
+        }
+
+        function updateGalleryView() {
+            const filtered = getFilteredNotes();
+            galleryGrid.innerHTML = '';
+
+            if (filtered.length === 0) {
+                galleryGrid.innerHTML = '<div class="empty-state">No notes found. Try adjusting your search.</div>';
+                return;
+            }
+
+            filtered.forEach(note => {
+                const noteEl = createGalleryNoteElement(note);
+                galleryGrid.appendChild(noteEl);
+            });
+
+            updateNoteCounter();
+        }
+
+        function updateArchiveView() {
+            galleryGrid.innerHTML = '';
+
+            if (archivedNotes.length === 0) {
+                galleryGrid.innerHTML = '<div class="empty-state">No archived notes.</div>';
+                return;
+            }
+
+            archivedNotes.forEach(note => {
+                const noteEl = createGalleryNoteElement(note, true);
+                galleryGrid.appendChild(noteEl);
+            });
+        }
+
+        function createNoteElement(note) {
+            const el = document.createElement('div');
+            el.className = `sticky-note ${note.color}`;
+            el.id = `note-${note.id}`;
+            el.style.left = note.x + 'px';
+            el.style.top = note.y + 'px';
+            
+            if (note.isTimeSensitive) {
+                el.classList.add('time-sensitive');
+            }
+
+            const isReminder = checkIfReminder(note);
+
+            el.innerHTML = `
+                <div class="note-header">
+                    <span class="note-date">${note.createdDate}</span>
+                    ${isReminder ? '<div class="note-flag">!</div>' : ''}
+                </div>
+                <div class="note-content">${escapeHtml(note.text)}</div>
+                ${note.isTimeSensitive && note.dueDate ? `<div class="note-due-date">📅 ${note.dueDate}</div>` : ''}
+                ${note.tags.length > 0 ? `<div class="note-footer">${note.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>` : ''}
+                <div class="note-actions">
+                    <button onclick="openEditModal(${note.id})">Edit</button>
+                    <button onclick="archiveNote(${note.id})">Archive</button>
+                    <button onclick="deleteNote(${note.id})">Delete</button>
+                </div>
+            `;
+
+            return el;
+        }
+
+        function createGalleryNoteElement(note, isArchived = false) {
+            const el = document.createElement('div');
+            el.className = `gallery-note ${note.color}`;
+            
+            if (note.isTimeSensitive) {
+                el.classList.add('time-sensitive');
+            }
+
+            const isReminder = checkIfReminder(note);
+
+            el.innerHTML = `
+                <div class="note-header">
+                    <span class="note-date">${note.createdDate}</span>
+                    ${isReminder ? '<div class="note-flag">!</div>' : ''}
+                </div>
+                <div class="note-content">${escapeHtml(note.text)}</div>
+                ${note.isTimeSensitive && note.dueDate ? `<div class="note-due-date">📅 ${note.dueDate}</div>` : ''}
+                ${note.tags.length > 0 ? `<div class="note-footer">${note.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>` : ''}
+                <div class="note-actions">
+                    ${isArchived ? `
+                        <button onclick="restoreNote(${note.id})">Restore</button>
+                        <button onclick="deleteNote(${note.id}, true)">Delete</button>
+                    ` : `
+                        <button onclick="openEditModal(${note.id})">Edit</button>
+                        <button onclick="archiveNote(${note.id})">Archive</button>
+                        <button onclick="deleteNote(${note.id})">Delete</button>
+                    `}
+                </div>
+            `;
+
+            return el;
+        }
+
+        function setupNoteDragListeners(el, noteId) {
+            el.addEventListener('mousedown', startDrag);
+            
+            function startDrag(e) {
+                draggedNote = noteId;
+                const rect = el.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                el.classList.add('grabbing');
+
+                function move(e) {
+                    const note = notes.find(n => n.id === noteId);
+                    if (note) {
+                        note.x = e.clientX - dragOffset.x;
+                        note.y = e.clientY - dragOffset.y;
+                        el.style.left = note.x + 'px';
+                        el.style.top = note.y + 'px';
+                    }
+                }
+
+                function stopDrag() {
+                    el.classList.remove('grabbing');
+                    saveNotes();
+                    document.removeEventListener('mousemove', move);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
+
+                document.addEventListener('mousemove', move);
+                document.addEventListener('mouseup', stopDrag);
+            }
+        }
+
+        function getFilteredNotes() {
+            const query = searchBox.value.toLowerCase();
+            return notes.filter(note => {
+                const textMatch = note.text.toLowerCase().includes(query);
+                const tagMatch = note.tags.some(tag => tag.toLowerCase().includes(query));
+                return textMatch || tagMatch;
+            });
+        }
+
+        function filterNotes() {
+            updateView();
+        }
+
+        function updateView() {
+            if (currentView === 'canvas') {
+                updateCanvasView();
+            } else if (currentView === 'gallery') {
+                updateGalleryView();
+            } else if (currentView === 'archive') {
+                updateArchiveView();
+            }
+        }
+
+        function updateNoteCounter() {
+            noteCounter.textContent = notes.length;
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        function checkIfReminder(note) {
+            if (!note.isTimeSensitive || !note.dueDate) return false;
+            
+            const today = new Date();
+            const dueDate = new Date(note.dueDate);
+            const diffTime = dueDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return diffDays <= 1 && diffDays >= 0;
+        }
+
+        function checkReminders() {
+            notes.forEach(note => {
+                if (checkIfReminder(note)) {
+                    // Visual indicator is already shown in the note
+                }
+            });
+        }
+
+        function addToUndoStack() {
+            undoStack.push({
+                notes: JSON.parse(JSON.stringify(notes)),
+                archived: JSON.parse(JSON.stringify(archivedNotes))
+            });
+            
+            if (undoStack.length > 10) {
+                undoStack.shift();
+            }
+        }
+
+        function undo() {
+            if (undoStack.length > 0) {
+                const previous = undoStack.pop();
+                notes = previous.notes;
+                archivedNotes = previous.archived;
+                saveNotes();
+                updateView();
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'undo-notification';
+            notification.textContent = message;
+            notification.innerHTML += ' <button onclick="this.parentElement.remove()" style="background: transparent; color: white; border: none; cursor: pointer; margin-left: 10px;">✕</button>';
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 5000);
+        }
+
+        function saveNotes() {
+            localStorage.setItem('notes', JSON.stringify(notes));
+            localStorage.setItem('archivedNotes', JSON.stringify(archivedNotes));
+        }
+
+        function loadNotes() {
+            const saved = localStorage.getItem('notes');
+            const savedArchived = localStorage.getItem('archivedNotes');
+            
+            if (saved) notes = JSON.parse(saved);
+            if (savedArchived) archivedNotes = JSON.parse(savedArchived);
+
+            const darkModeEnabled = localStorage.getItem('darkMode') === 'true';
+            if (darkModeEnabled) {
+                document.body.classList.add('dark-mode');
+            }
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
